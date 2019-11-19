@@ -97,11 +97,15 @@ private:
 		if ((index1 = calc_index(upper, left)) < 0
 			|| (index2 = calc_index(lower, right)) < 0)
 			return -1;
-		int i = upper;
-		int j = left;
-		while (j <= right) {
-			while (i <= lower) {
-				int k = i + 1;
+		if (upper <= lower)
+			return 0;
+		if (right <= left)
+			return 0;
+		int row = upper;
+		int col = left;
+		while (col <= right) {
+			while (row <= lower) {
+				int row2 = row + 1;
 
 			}
 		}

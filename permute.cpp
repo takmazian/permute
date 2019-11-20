@@ -10,52 +10,39 @@
 #include <string>
 using namespace std;
 
-void generate_matrix(const int m, const int n, string fileName);
 void permute_matrix(string inputFN, string outputFN);
-
-int main(int argc, char* argv[])
-{
-	try {
-		if (argc > 2) {
-			const char* key = argv[1];
-			if (key[0] == '-') {
-				if (argc > 3 && key[1] == 'g') {
-					const int  m = atoi(argv[2]), n = atoi(argv[3]);
-					string fn;
-					cin >> fn;
-					generate_matrix(m, n, fn);
-				}
-				else if (key[1] == 'p') {
-					string ifn = argv[2], ofn;
-					cin >> ofn;
-					permute_matrix(ifn, ofn);
-				}
-			}
-		}
-	}
-	catch (exception e) {
-		cerr << "\n" << e.what() << endl;
-		return -1;
-	}
-}
-
-class Matrix
-{
+class Matrix {
 public:
 	int m, n;
 	vector<int> matrix;
+	set<int> generator;
 
-	Matrix(vector<int> matr, int m, int n) {
-		matrix = matr;
+	Matrix(vector<int> matrix, int m, int n) {
+		this->matrix = matrix;
 		this->m = m;
 		this->n = n;
+		for (int j = 1; j <= n; j++) {
+			generator.insert(j);
+		}
+	}
+
+	Matrix(int m, int n) {
+		this->m = m;
+		this->n = n;
+		for (int j = 1; j <= n; j++) {
+			generator.insert(j);
+			for (int i = 1; i <= m; i++)
+				matrix.push_back(j);
+		}
+		random_device rd;
+		shuffle(matrix.begin(), matrix.end(), rd);
 	}
 
 private:
 	bool validate_row(int row) {
-		return row <= n && row >= 1; 
+		return row <= n && row >= 1;
 	}
-	
+
 	bool validate_col(int col) {
 		return col >= 1 && col <= m;
 	}
@@ -92,27 +79,59 @@ private:
 		}
 	}
 
-	int permute(int upper, int left, int lower, int right) {
+	int permute(int top, int left, int bottom, int right) {
 		int index1, index2;
-		if ((index1 = calc_index(upper, left)) < 0
-			|| (index2 = calc_index(lower, right)) < 0)
+		if ((index1 = calc_index(top, left)) < 0
+			|| (index2 = calc_index(bottom, right)) < 0)
 			return -1;
-		if (upper <= lower)
+		if (top >= bottom)
 			return 0;
-		if (right <= left)
+		if (left >= right)
 			return 0;
-		int row = upper;
 		int col = left;
 		while (col <= right) {
-			while (row <= lower) {
-				int row2 = row + 1;
-
-			}
+			if (permute_one_column(top, bottom, right, col, generator));
+			col++;
 		}
-		return 1;
 	}
 
-public: int permute() {
+	inline static bool contains(set<int> a_set, int value) {
+		return a_set.find(value) != a_set.end();
+	}
+
+	int permute_one_column(const int top, const int bottom, const int right, const int col, set<int> available_set) {
+		if (top >= bottom)
+			return 0;
+		int row = top;
+		int test_value = get(row, col);
+		available_set.erase(test_value);
+		row++;
+		while (row <= bottom) {
+			int cur_col = col;
+			bool success = false;
+			while (cur_col < right) {
+				cur_col++;
+				test_value = get(row, col);
+				if (contains(available_set, test_value))  // проверка на разрешенное значение
+				{
+					available_set.erase(test_value);
+					success = true;
+					break;
+				}
+				else {
+					swap(row, col, cur_col);
+				}
+			}
+			if (success)
+				row++;
+			else
+				return -1;
+		}
+		return 0;
+	}
+
+public:
+	int permute() {
 		return permute(1, 1, n, m);
 	}
 };
@@ -130,18 +149,32 @@ void save_matrix(Matrix matr, string outputFN) {
 	file.close();
 }
 
-void generate_matrix(const int m, const int n, const string fileName) {
-	vector<int> original;
-	for (int j = 1; j <= n; j++)
-		for (int i = 1; i <= m; i++) 
-			original.push_back(j);
-
-	random_device rd;
-	shuffle(original.begin(), original.end(), rd);
-	Matrix matr = Matrix(original, m, n);
-	save_matrix(matr, fileName);
+int main(int argc, char* argv[])
+{
+	try {
+		if (argc > 2) {
+			const char* key = argv[1];
+			if (key[0] == '-') {
+				if (argc > 3 && key[1] == 'g') {
+					const int  m = atoi(argv[2]), n = atoi(argv[3]);
+					string fn;
+					cin >> fn;
+					Matrix matr = Matrix(m, n);
+					save_matrix(matr, fn);
+				}
+				else if (key[1] == 'p') {
+					string ifn = argv[2], ofn;
+					cin >> ofn;
+					permute_matrix(ifn, ofn);
+				}
+			}
+		}
+	}
+	catch (exception e) {
+		cerr << "\n" << e.what() << endl;
+		return -1;
+	}
 }
-
 
 Matrix load_matrix(string inputFN) {
 	ifstream ifile(inputFN);
@@ -154,7 +187,7 @@ Matrix load_matrix(string inputFN) {
 		v.insert(v.end(), istream_iterator<int>(is), istream_iterator<int>());
 		matrix.insert(matrix.end(), v.begin(), v.end());
 		if (m < 0) {
-			m = (int) v.size();
+			m = (int)v.size();
 		}
 		n++;
 		v.clear();
@@ -166,8 +199,9 @@ Matrix load_matrix(string inputFN) {
 
 void permute_matrix(string inputFN, string outputFN) {
 	Matrix matr = load_matrix(inputFN);
-	cout << "Matrix is " << (matr.permute() == 0 ? "solved" : "unsolvable") << endl;
-	save_matrix(matr, outputFN);
+	bool success = (matr.permute() == 0);
+	cout << "Matrix is " << (success ? ("solved, see output in " + outputFN) : "unsolvable") << endl;
+	if (success) save_matrix(matr, outputFN);
 }
 
 

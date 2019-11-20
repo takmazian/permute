@@ -107,19 +107,15 @@ private:
 		available_set.erase(test_value);
 		row++;
 		while (row <= bottom) {
-			int cur_col = col;
 			bool success = false;
-			while (cur_col < right) {
-				cur_col++;
-				test_value = get(row, col);
-				if (contains(available_set, test_value))  // проверка на разрешенное значение
+			int cur_col = col + 1;
+			while (!success && cur_col <= right + 1) {
+				if (success = contains(available_set, (test_value = get(row, col))))  // проверка на разрешенное значение
 				{
 					available_set.erase(test_value);
-					success = true;
-					break;
-				}
-				else {
-					swap(row, col, cur_col);
+				} 
+				else if(cur_col <= right) {
+					swap(row, col, cur_col++);
 				}
 			}
 			if (success)

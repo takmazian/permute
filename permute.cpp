@@ -15,14 +15,22 @@ class Matrix {
 public:
 	int m, n;
 	vector<int> matrix;
-	set<int> generator;
+	vector<set<int>> available_sets;
 
 	Matrix(vector<int> matrix, int m, int n) {
 		this->matrix = matrix;
 		this->m = m;
 		this->n = n;
+		set<int> generator;
 		for (int j = 1; j <= n; j++) {
 			generator.insert(j);
+		}
+		for (int j = 1; j <= n; j++) {
+			for (int i = 1; i <= m; i++) {
+				set<int> s;
+				s.insert(generator.begin(), generator.end());
+				available_sets.push_back(s);
+			}		
 		}
 	}
 
@@ -30,7 +38,6 @@ public:
 		this->m = m;
 		this->n = n;
 		for (int j = 1; j <= n; j++) {
-			generator.insert(j);
 			for (int i = 1; i <= m; i++)
 				matrix.push_back(j);
 		}
@@ -71,6 +78,15 @@ private:
 			return -1;
 	}
 
+	set<int>& get_available_set(int row, int col) {
+		int index;
+		if ((index = calc_index(row, col)) >= 0)
+			return available_sets[index];
+		else
+			throw exception("Index out of bounds") ;
+	}
+
+
 	void swap(int row, int col1, int col2) {
 		int v1, v2;
 		if ((v1 = get(row, col1)) > 0 && (v2 = get(row, col2)) > 0) {
@@ -79,7 +95,7 @@ private:
 		}
 	}
 
-	int permute(int top, int left, int bottom, int right) {
+	bool permute(int top, int left, int bottom, int right) {
 		int index1, index2;
 		if ((index1 = calc_index(top, left)) < 0
 			|| (index2 = calc_index(bottom, right)) < 0)
@@ -89,48 +105,67 @@ private:
 		if (left >= right)
 			return 0;
 		int col = left;
+		bool success = true;
 		while (col <= right) {
-			if (permute_one_column(top, bottom, right, col, generator)==0)
+			if (permute_one_column(top, bottom, right, col))
 				col++;
-			else
-				return -1;
+			else {
+				success = false;
+				break;
+			}
 		}
-		return 0;
+		return success;
 	}
 
 	inline static bool contains(set<int> a_set, int value) {
 		return a_set.find(value) != a_set.end();
 	}
 
-	int permute_one_column(const int top, const int bottom, const int right, const int col, set<int> available_set) {
+	bool permute_one_column(const int top, const int bottom, const int right, const int col) {
 		if (top >= bottom)
-			return 0;
-		int row = top;
-		int test_value = get(row, col);
-		available_set.erase(test_value);
-		row++;
+			return true;
+		vector<set<int>> available_sets;
+		int row = top, test_value;
+		bool success;
 		while (row <= bottom) {
-			bool success = false;
+			success = false;
+			set<int>& a_set = get_available_set(row, col);
 			int cur_col = col + 1;
 			while (!success && cur_col <= right + 1) {
-				if (success = contains(available_set, (test_value = get(row, col))))  // проверка на разрешенное значение
+				if (success = contains(a_set, (test_value = get(row, col))))  // проверка на разрешенное значение
 				{
-					available_set.erase(test_value);
+					erase_or_insert_after(col, test_value, row, bottom, false);
 				} 
 				else if(cur_col <= right) {
-					swap(row, col, cur_col++);
+					swap(row, col, cur_col);
 				}
+				cur_col++;
 			}
 			if (success)
 				row++;
-			else
-				return -1;
+			else if (row > top) {
+				row--;
+				test_value = get(row, col);
+				erase_or_insert_after(col, test_value, row, bottom, true);
+				get_available_set(row, col).erase(test_value);
+			}
+			else 
+				return false;
 		}
-		return 0;
+		return success;
+	}
+
+	void inline erase_or_insert_after(const int col, const int value, const int after, const int bottom, const bool insert_if_true) {
+		for (int i = after + 1; i <= bottom; i++) {
+			if(insert_if_true)
+				get_available_set(i, col).insert(value);
+			else
+				get_available_set(i, col).erase(value);
+		}
 	}
 
 public:
-	int permute() {
+	bool permute() {
 		return permute(1, 1, n, m);
 	}
 };
@@ -198,7 +233,7 @@ Matrix load_matrix(string inputFN) {
 
 void permute_matrix(string inputFN, string outputFN) {
 	Matrix matr = load_matrix(inputFN);
-	bool success = (matr.permute() == 0);
+	bool success = matr.permute();
 	cout << "Matrix is " << (success ? ("solved, see output in " + outputFN) : "unsolvable") << endl;
 	if (success) save_matrix(matr, outputFN);
 }

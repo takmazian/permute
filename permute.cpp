@@ -90,9 +90,12 @@ private:
 			return 0;
 		int col = left;
 		while (col <= right) {
-			if (permute_one_column(top, bottom, right, col, generator));
-			col++;
+			if (permute_one_column(top, bottom, right, col, generator)==0)
+				col++;
+			else
+				return -1;
 		}
+		return 0;
 	}
 
 	inline static bool contains(set<int> a_set, int value) {

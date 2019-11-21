@@ -11,26 +11,33 @@
 using namespace std;
 
 void permute_matrix(string inputFN, string outputFN);
+
 class Matrix {
+	vector<set<int>> available_sets;
 public:
 	int m, n;
 	vector<int> matrix;
-	vector<set<int>> available_sets;
+	int memory_iterations = 0;
+	int read_iterations = 0;
 
-	Matrix(vector<int> matrix, int m, int n) {
-		this->matrix = matrix;
+	Matrix(const vector<int>& transpon, int m, int n) {
 		this->m = m;
 		this->n = n;
 		set<int> generator;
 		for (int j = 1; j <= n; j++) {
 			generator.insert(j);
 		}
-		for (int j = 1; j <= n; j++) {
-			for (int i = 1; i <= m; i++) {
+		matrix.clear();
+		for (int row = 1; row <= n; row++) 
+			for (int col = 1; col <= m; col++) 
+				matrix.push_back(0);
+		for (int row = 1; row <= n; row++) {
+			for (int col = 1; col <= m; col++) {
 				set<int> s;
 				s.insert(generator.begin(), generator.end());
 				available_sets.push_back(s);
-			}		
+				put(row, col, transpon[(row - 1) * m + (col - 1)]);
+			}
 		}
 	}
 
@@ -56,7 +63,7 @@ private:
 
 	int calc_index(int row, int col) {
 		if (validate_row(row) && validate_col(col)) {
-			return (row - 1) * m + col - 1;
+			return (row - 1) + (col - 1) * n;
 		}
 		else
 			return -1;
@@ -71,6 +78,7 @@ private:
 	}
 
 	int get(int row, int col) {
+		read_iterations++;
 		int index;
 		if ((index = calc_index(row, col)) >= 0)
 			return matrix[index];
@@ -83,9 +91,8 @@ private:
 		if ((index = calc_index(row, col)) >= 0)
 			return available_sets[index];
 		else
-			throw exception("Index out of bounds") ;
+			throw exception("Index out of bounds");
 	}
-
 
 	void swap(int row, int col1, int col2) {
 		int v1, v2;
@@ -99,11 +106,11 @@ private:
 		int index1, index2;
 		if ((index1 = calc_index(top, left)) < 0
 			|| (index2 = calc_index(bottom, right)) < 0)
-			return -1;
+			return false;
 		if (top >= bottom)
-			return 0;
+			return true;
 		if (left >= right)
-			return 0;
+			return true;
 		int col = left;
 		bool success = true;
 		while (col <= right) {
@@ -124,7 +131,8 @@ private:
 	bool permute_one_column(const int top, const int bottom, const int right, const int col) {
 		if (top >= bottom)
 			return true;
-		vector<set<int>> available_sets;
+		if (col >= right)
+			return true;
 		int row = top, test_value;
 		bool success;
 		while (row <= bottom) {
@@ -134,9 +142,9 @@ private:
 			while (!success && cur_col <= right + 1) {
 				if (success = contains(a_set, (test_value = get(row, col))))  // проверка на разрешенное значение
 				{
-					erase_or_insert_after(col, test_value, row, bottom, false);
-				} 
-				else if(cur_col <= right) {
+					erase_or_insert_after(test_value, row, col, bottom, right, false);
+				}
+				else if (cur_col <= right) {
 					swap(row, col, cur_col);
 				}
 				cur_col++;
@@ -146,35 +154,46 @@ private:
 			else if (row > top) {
 				row--;
 				test_value = get(row, col);
-				erase_or_insert_after(col, test_value, row, bottom, true);
+				erase_or_insert_after(test_value, row, col, bottom, right, true);
 				get_available_set(row, col).erase(test_value);
+				memory_iterations++;
 			}
-			else 
+			else
 				return false;
 		}
 		return success;
 	}
 
-	void inline erase_or_insert_after(const int col, const int value, const int after, const int bottom, const bool insert_if_true) {
-		for (int i = after + 1; i <= bottom; i++) {
-			if(insert_if_true)
+	void inline erase_or_insert_after(const int value, const int row, const int col, const int bottom, const int right, const bool insert_if_true) {
+		for (int i = row + 1; i <= bottom; i++) {
+			memory_iterations++;
+			if (insert_if_true)
 				get_available_set(i, col).insert(value);
 			else
 				get_available_set(i, col).erase(value);
 		}
 	}
 
+
 public:
 	bool permute() {
 		return permute(1, 1, n, m);
+	}
+
+	int get_value(int row, int col) {
+		read_iterations--;
+		return get(row, col);
 	}
 };
 
 void save_matrix(Matrix matr, string outputFN) {
 	cout << " M = " << matr.m << ", N = " << matr.n << endl;
-	vector<int>& original = matr.matrix;
+	vector<int> transpon; 
+	for (int i = 1; i <= matr.n; i++)
+		for (int j = 1; j <= matr.m; j++)
+			transpon.push_back(matr.get_value(i, j));
 	ofstream file(outputFN);
-	vector <int> ::iterator it = original.begin();
+	vector <int> ::iterator it = transpon.begin();
 	for (int i = 1; i <= matr.n; i++) {
 		copy(it, it + matr.m, ostream_iterator<int>(file, " "));
 		it = it + matr.m;
@@ -214,12 +233,12 @@ Matrix load_matrix(string inputFN) {
 	ifstream ifile(inputFN);
 	int n = 0, m = -1;
 	string str;
-	vector <int> matrix, v;
+	vector <int> transpon, v;
 	while (ifile) {
 		getline(ifile, str);
 		istringstream is(str);
 		v.insert(v.end(), istream_iterator<int>(is), istream_iterator<int>());
-		matrix.insert(matrix.end(), v.begin(), v.end());
+		transpon.insert(transpon.end(), v.begin(), v.end());
 		if (m < 0) {
 			m = (int)v.size();
 		}
@@ -228,13 +247,14 @@ Matrix load_matrix(string inputFN) {
 
 	}
 	n--;
-	return Matrix(matrix, m, n);
+	return Matrix(transpon, m, n);
 }
 
 void permute_matrix(string inputFN, string outputFN) {
 	Matrix matr = load_matrix(inputFN);
 	bool success = matr.permute();
-	cout << "Matrix is " << (success ? ("solved, see output in " + outputFN) : "unsolvable") << endl;
+	cout << "Matrix is " << (success ? ("solvedSee output in " + outputFN) : "unsolvable") << endl;
+	cout << "Total " << matr.read_iterations << "read iterations and " << matr.memory_iterations << "aux iterations.";
 	if (success) save_matrix(matr, outputFN);
 }
 

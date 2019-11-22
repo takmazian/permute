@@ -116,7 +116,11 @@ private:
 		while (col <= right) {
 			if (permute_one_column(top, bottom, right, col))
 				col++;
-			else {
+			else if (col > left) {
+				col--;
+				int test_value = get(top, col);
+				get_available_set(top, col).erase(test_value);
+			} else {
 				success = false;
 				break;
 			}
@@ -158,7 +162,7 @@ private:
 				get_available_set(row, col).erase(test_value);
 				memory_iterations++;
 			}
-			else
+			else 
 				return false;
 		}
 		return success;
@@ -254,7 +258,7 @@ void permute_matrix(string inputFN, string outputFN) {
 	Matrix matr = load_matrix(inputFN);
 	bool success = matr.permute();
 	cout << "Matrix is " << (success ? ("solvedSee output in " + outputFN) : "unsolvable") << endl;
-	cout << "Total " << matr.read_iterations << "read iterations and " << matr.memory_iterations << "aux iterations.";
+	cout << "Total " << matr.read_iterations << " read iterations and " << matr.memory_iterations << " aux iterations.";
 	if (success) save_matrix(matr, outputFN);
 }
 

@@ -119,12 +119,19 @@ private:
 		while (col <= right) {
 			if (permute_one_column(top, bottom, right, col))
 				col++;
-			else if (col > left) {
-				get_set(available_sets, top, col)->insert(get(top, col));
-				cout << "shift one column lef" << endl;
+			/* else if (col > left) {  // это была заготовка, но получилось и без нее.
+				set<int>* ps = get_set(prohibited_sets, top, col);
+				get_set(available_sets, top, col)->insert(ps->begin(), ps->end());
+				ps->clear();
 				col--;
+				cout << "shift left" << endl;
 				get_set(available_sets, top, col)->erase(get(top, col));
-			} else {
+				int test_value = get(top, col);
+				erase_or_insert_after(test_value, top, col, bottom, right, true);
+				get_set(prohibited_sets, top, col)->insert(test_value);
+				get_set(available_sets, top, col)->erase(test_value);
+				memory_iterations++;
+			} */ else {
 				success = false;
 				break;
 			}
@@ -160,13 +167,14 @@ private:
 			else if (row > top) {
 				set<int>* ps = get_set(prohibited_sets, row, col);
 				get_set(available_sets, row, col)->insert(ps->begin(), ps->end());
+				memory_iterations += ps->size();
 				ps->clear();
 				row--;
 				test_value = get(row, col);
 				erase_or_insert_after(test_value, row, col, bottom, right, true);
 				get_set(prohibited_sets, row, col)->insert(test_value);
 				get_set(available_sets, row, col)->erase(test_value);
-				memory_iterations++;
+				memory_iterations += 2;
 			}
 			else 
 				return false;

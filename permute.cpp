@@ -96,7 +96,8 @@ private:
 
 	void swap(int row, int col1, int col2) {
 		int v1, v2;
-		if ((v1 = get(row, col1)) > 0 && (v2 = get(row, col2)) > 0) {
+		if (col1 != col2 && 
+			(v1 = get(row, col1)) > 0 && (v2 = get(row, col2)) > 0) {
 			put(row, col1, v2);
 			put(row, col2, v1);
 		}
@@ -117,9 +118,9 @@ private:
 			if (permute_one_column(top, bottom, right, col))
 				col++;
 			else if (col > left) {
+				get_available_set(top, col).insert(get(top, col));
 				col--;
-				int test_value = get(top, col);
-				get_available_set(top, col).erase(test_value);
+				get_available_set(top, col).erase(get(top, col));
 			} else {
 				success = false;
 				break;
@@ -142,20 +143,20 @@ private:
 		while (row <= bottom) {
 			success = false;
 			set<int>& a_set = get_available_set(row, col);
-			int cur_col = col + 1;
-			while (!success && cur_col <= right + 1) {
-				if (success = contains(a_set, (test_value = get(row, col))))  // проверка на разрешенное значение
-				{
-					erase_or_insert_after(test_value, row, col, bottom, right, false);
-				}
-				else if (cur_col <= right) {
-					swap(row, col, cur_col);
-				}
+			int cur_col = col;
+			success = contains(a_set, (test_value = get(row, col)));
+			while (!success && cur_col < right) {
 				cur_col++;
+				success = contains(a_set, (test_value = get(row, cur_col)));
 			}
-			if (success)
+			if (success) {
+				erase_or_insert_after(test_value, row, col, bottom, right, false);
+				if (cur_col != col)
+					swap(row, col, cur_col);
 				row++;
+			}
 			else if (row > top) {
+				get_available_set(row, col).insert(get(row, col));
 				row--;
 				test_value = get(row, col);
 				erase_or_insert_after(test_value, row, col, bottom, right, true);
@@ -257,7 +258,7 @@ Matrix load_matrix(string inputFN) {
 void permute_matrix(string inputFN, string outputFN) {
 	Matrix matr = load_matrix(inputFN);
 	bool success = matr.permute();
-	cout << "Matrix is " << (success ? ("solvedSee output in " + outputFN) : "unsolvable") << endl;
+	cout << "Matrix is " << (success ? ("solved. \nSee output in " + outputFN) : "unsolvable") << endl;
 	cout << "Total " << matr.read_iterations << " read iterations and " << matr.memory_iterations << " aux iterations.";
 	if (success) save_matrix(matr, outputFN);
 }

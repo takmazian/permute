@@ -14,6 +14,7 @@ void permute_matrix(string inputFN, string outputFN);
 
 class Matrix {
 	vector<set<int>> available_sets;
+	vector<set<int>> prohibited_sets;
 public:
 	int m, n;
 	vector<int> matrix;
@@ -34,6 +35,7 @@ public:
 		for (int row = 1; row <= n; row++) {
 			for (int col = 1; col <= m; col++) {
 				set<int> s;
+				prohibited_sets.push_back(s);
 				s.insert(generator.begin(), generator.end());
 				available_sets.push_back(s);
 				put(row, col, transpon[(row - 1) * m + (col - 1)]);
@@ -86,10 +88,10 @@ private:
 			return -1;
 	}
 
-	set<int>& get_available_set(int row, int col) {
+	set<int>* get_set(vector<set<int>>& sets, int row, int col) {
 		int index;
 		if ((index = calc_index(row, col)) >= 0)
-			return available_sets[index];
+			return &sets[index];
 		else
 			throw exception("Index out of bounds");
 	}
@@ -118,9 +120,10 @@ private:
 			if (permute_one_column(top, bottom, right, col))
 				col++;
 			else if (col > left) {
-				get_available_set(top, col).insert(get(top, col));
+				get_set(available_sets, top, col)->insert(get(top, col));
+				cout << "shift one column lef" << endl;
 				col--;
-				get_available_set(top, col).erase(get(top, col));
+				get_set(available_sets, top, col)->erase(get(top, col));
 			} else {
 				success = false;
 				break;
@@ -129,8 +132,8 @@ private:
 		return success;
 	}
 
-	inline static bool contains(set<int> a_set, int value) {
-		return a_set.find(value) != a_set.end();
+	inline static bool contains(set<int>* a_set, int value) {
+		return a_set->find(value) != a_set->end();
 	}
 
 	bool permute_one_column(const int top, const int bottom, const int right, const int col) {
@@ -141,8 +144,7 @@ private:
 		int row = top, test_value;
 		bool success;
 		while (row <= bottom) {
-			success = false;
-			set<int>& a_set = get_available_set(row, col);
+			set<int>* a_set = get_set(available_sets, row, col);
 			int cur_col = col;
 			success = contains(a_set, (test_value = get(row, col)));
 			while (!success && cur_col < right) {
@@ -156,11 +158,14 @@ private:
 				row++;
 			}
 			else if (row > top) {
-				get_available_set(row, col).insert(get(row, col));
+				set<int>* ps = get_set(prohibited_sets, row, col);
+				get_set(available_sets, row, col)->insert(ps->begin(), ps->end());
+				ps->clear();
 				row--;
 				test_value = get(row, col);
 				erase_or_insert_after(test_value, row, col, bottom, right, true);
-				get_available_set(row, col).erase(test_value);
+				get_set(prohibited_sets, row, col)->insert(test_value);
+				get_set(available_sets, row, col)->erase(test_value);
 				memory_iterations++;
 			}
 			else 
@@ -173,9 +178,9 @@ private:
 		for (int i = row + 1; i <= bottom; i++) {
 			memory_iterations++;
 			if (insert_if_true)
-				get_available_set(i, col).insert(value);
+				get_set(available_sets, i, col)->insert(value);
 			else
-				get_available_set(i, col).erase(value);
+				get_set(available_sets, i, col)->erase(value);
 		}
 	}
 
